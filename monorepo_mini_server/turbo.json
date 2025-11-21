@@ -1,0 +1,68 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local"],
+  "globalEnv": ["NODE_ENV", "PORT", "DATABASE_URL", "API_URL"],
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "build/**", "!.next/cache/**"],
+      "env": ["NODE_ENV", "API_URL"],
+      "cache": true
+    },
+    "build:prod": {
+      "dependsOn": ["^build:prod"],
+      "outputs": ["dist/**", ".next/**", "build/**", "!.next/cache/**"],
+      "env": ["NODE_ENV", "API_URL"],
+      "cache": true
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^build:dev"]
+    },
+    "build:dev": {
+      "outputs": ["dist/**"],
+      "cache": true
+    },
+    "start": {
+      "dependsOn": ["build"],
+      "outputs": [],
+      "env": ["NODE_ENV", "PORT", "DATABASE_URL", "API_URL"],
+      "cache": false
+    },
+    "db:migrate": {
+      "outputs": [],
+      "cache": false
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**/*.tsx",
+        "src/**/*.ts",
+        "test/**/*.ts",
+        "test/**/*.tsx"
+      ],
+      "outputs": ["coverage/**"],
+      "cache": true
+    },
+    "lint": {
+      "outputs": [],
+      "cache": true
+    },
+    "clean": {
+      "cache": false
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "format": {
+      "outputs": [],
+      "cache": false
+    },
+    "deploy": {
+      "dependsOn": ["build", "test", "lint"],
+      "cache": false
+    }
+  }
+}

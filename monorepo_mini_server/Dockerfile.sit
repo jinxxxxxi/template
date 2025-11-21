@@ -1,0 +1,65 @@
+# 多阶段构建 - 构建阶段
+FROM catalyst-cn-shanghai.cr.volces.com/devops/stepbase-build:latest AS builder
+
+WORKDIR /app
+
+# 复制package文件以利用Docker缓存
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/types/ ./packages/types/
+COPY packages/database/ ./packages/database/
+COPY apps/web/package.json ./apps/web/
+COPY apps/server/package.json ./apps/server/
+
+# 安装依赖
+RUN pnpm install --frozen-lockfile
+
+# 复制源代码
+COPY . .
+
+# 构建类型包和数据库包
+RUN pnpm run build:types
+RUN pnpm run build:database
+
+# 构建web应用
+RUN pnpm run build:web
+
+# 构建server应用
+RUN pnpm run build:server
+
+# 复制web构建产物到server的public目录
+RUN pnpm run copy:web
+
+# 生产运行阶段
+FROM catalyst-cn-shanghai.cr.volces.com/devops/stepbase-runtime-node:latest AS runtime
+
+WORKDIR /app
+
+# 设置环境变量
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# 复制必要的文件
+COPY --from=builder /app/apps/server/dist ./dist
+COPY --from=builder /app/apps/server/public ./public
+COPY --from=builder /app/apps/server/package.json ./package.json
+COPY --from=builder /app/apps/server/node_modules ./node_modules
+COPY --from=builder /app/packages/database/dist ./packages/database/dist
+COPY --from=builder /app/packages/types/dist ./packages/types/dist
+
+# 创建非root用户
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
+
+# 更改文件所有权
+RUN chown -R nestjs:nodejs /app
+USER nestjs
+
+# 暴露端口
+EXPOSE 3000
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+# 启动应用
+CMD ["node", "dist/main"]

@@ -1,0 +1,27 @@
+{
+  "name": "@packages/types",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts",
+    "build:prod": "NODE_ENV=production tsup src/index.ts",
+    "build:dev": "tsup src/index.ts",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@packages/database": "workspace:*",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.3.1",
+    "eslint": "^8.42.0",
+    "prettier": "^3.0.0",
+    "tsup": "^6.7.0",
+    "typescript": "^5.0.0",
+    "rimraf": "^5.0.5"
+  }
+}

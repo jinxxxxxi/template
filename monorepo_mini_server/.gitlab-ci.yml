@@ -1,0 +1,101 @@
+variables:
+  APP: $CI_PROJECT_NAMESPACE
+  SERVER: $CI_PROJECT_NAME
+  VERSION: $CI_COMMIT_SHA
+  CATALYST_COMMIT_DATE: $CI_COMMIT_TIMESTAMP
+  PNPM_VERSION: 10.6.5
+  REGISTRY: 'catalyst-cn-shanghai.cr.volces.com'
+  IMAGE_TAG: '${CI_COMMIT_REF_SLUG}_${CI_COMMIT_SHORT_SHA}'
+
+default:
+  tags:
+    - dev-ci-stepchat
+
+workflow:
+  rules:
+    # 生产环境 - 标签发布
+    - if: $CI_COMMIT_TAG
+      variables:
+        NODE_ENV: production
+    # 测试环境 - 主分支
+    - if: $CI_COMMIT_BRANCH == "main"
+      variables:
+        NODE_ENV: test
+    # 开发环境 - 功能分支
+    - if: $CI_COMMIT_BRANCH =~ /^(feat|bugfix|release)\/.+$/
+      variables:
+        NODE_ENV: test
+    # 合并请求
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      variables:
+        NODE_ENV: test
+
+stages:
+  - deploy
+
+# 测试环境部署模板
+.build-test-deploy:
+  stage: deploy
+  image:
+    name: catalyst-cn-shanghai.cr.volces.com/devops/stepbase-kaniko:latest
+    entrypoint: ['']
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: always
+    - if: $CI_COMMIT_BRANCH =~ /^(feat|bugfix|release)\/.+$/
+      when: manual
+      allow_failure: true
+
+# 测试环境部署 - Web应用
+deploy-test-web:
+  extends: .build-test-deploy
+  script:
+    - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/deploy/web/Dockerfile.test" --destination "$REGISTRY/busi/$APP/$SERVER-web:test-$IMAGE_TAG" --build-arg NODE_ENV=test
+
+# 测试环境部署 - Server应用
+deploy-test-server:
+  extends: .build-test-deploy
+  script:
+    - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/deploy/server/Dockerfile.test" --destination "$REGISTRY/busi/$APP/$SERVER-server:test-$IMAGE_TAG" --build-arg NODE_ENV=test
+
+# 生产环境部署模板
+.build-prod-deploy:
+  stage: deploy
+  image:
+    name: $REGISTRY/devops/stepbase-kaniko:latest
+    entrypoint: ['']
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: always
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+    - if: $CI_COMMIT_BRANCH =~ /^(feat|bugfix|release)\/.+$/
+      when: manual
+      allow_failure: true
+  environment:
+    name: production
+
+# 生产环境部署 - Web应用
+deploy-prod-web:
+  extends: .build-prod-deploy
+  script:
+    - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/deploy/web/Dockerfile.prod" --destination "$REGISTRY/busi/$APP/$SERVER-web:prod-$IMAGE_TAG" --build-arg NODE_ENV=production --cache=true
+
+# 生产环境部署 - Server应用
+deploy-prod-server:
+  extends: .build-prod-deploy
+  script:
+    - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/deploy/server/Dockerfile.prod" --destination "$REGISTRY/busi/$APP/$SERVER-server:prod-$IMAGE_TAG" --destination "$REGISTRY/busi/$APP/$SERVER-server:prod-latest" --build-arg NODE_ENV=production
+
+# 清理旧镜像
+cleanup:
+  stage: .post
+  image: alpine:latest
+  script:
+    - echo "清理超过30天的旧镜像"
+    - echo "清理缓存镜像"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: always
+  tags:
+    - dev-ci-stepchat

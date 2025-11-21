@@ -1,0 +1,46 @@
+# 多阶段构建 - 构建阶段
+FROM catalyst-cn-shanghai.cr.volces.com/devops/stepbase-build:latest AS builder
+# FROM node:18 AS builder
+
+WORKDIR /app
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y openssl curl && \
+    npm config set registry https://registry.npmmirror.com && \
+    corepack enable && corepack prepare pnpm@latest --activate
+
+COPY package.json pnpm-*.yaml turbo.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/server/package.json ./apps/server/
+# 完整复制 database 包
+COPY packages/database/ ./packages/database/
+# 完整复制 types 包
+COPY packages/types/ ./packages/types/
+
+# 安装依赖（利用缓存）
+RUN pnpm install --frozen-lockfile
+
+# 复制源代码
+COPY . .
+
+# 构建server应用
+RUN pnpm run build:server
+
+# 生产运行阶段
+FROM catalyst-cn-shanghai.cr.volces.com/devops/stepbase-runtime-node:latest AS runtime
+# FROM node:18 AS runner
+
+WORKDIR /app
+
+# 设置环境变量
+ENV NODE_ENV=test
+ENV PORT=3001
+
+# 复制整个应用目录
+COPY --from=builder /app .
+
+# 暴露端口
+EXPOSE 3001
+
+# 启动应用
+CMD ["node", "apps/server/dist/src/main.js"] 

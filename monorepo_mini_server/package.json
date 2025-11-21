@@ -1,0 +1,44 @@
+{
+  "name": "monorepo_mini_server",
+  "version": "1.0.0",
+  "description": "小程序+sevre+web monorepo 模板",
+  "private": true,
+  "packageManager": "pnpm@10.6.5",
+  "scripts": {
+    "build": "turbo run build",
+    "build:prod": "turbo run build:prod",
+    "dev": "turbo run dev",
+    "dev:web": "dotenv -e .env.web.local -- turbo run dev --filter=@apps/web",
+    "dev:server": "dotenv -e .env.local -- turbo run dev --filter=@apps/server",
+    "start:web": "cd ./apps/web && npm run start",
+    "start:server": "cd ./apps/server && pnpm run start:prod",
+    "build:web": "turbo run build --filter=@apps/web",
+    "build:server": "turbo run build --filter=@apps/server",
+    "build:web:test": "dotenv -e .env.web.test -- turbo run build --filter=@apps/web",
+    "build:web:prod": "dotenv -e .env.web.prod -- turbo run build --filter=@apps/web",
+    "db:migrate": "dotenv -e .env.local -- turbo run db:migrate --filter=@packages/database",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "clean:turbo": "rm -rf .turbo node_modules/.cache/turbo",
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
+  },
+  "keywords": [
+    "preview",
+    "react",
+    "nestjs",
+    "monorepo",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "dotenv": "^16.6.1",
+    "dotenv-cli": "^7.4.1",
+    "eslint": "^8.42.0",
+    "prettier": "^3.0.0",
+    "turbo": "^1.12.5",
+    "typescript": "^5.0.0"
+  }
+}

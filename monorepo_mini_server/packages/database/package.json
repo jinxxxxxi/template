@@ -1,0 +1,44 @@
+{
+  "name": "@packages/database",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "prisma"
+  ],
+  "scripts": {
+    "clean": "rimraf dist",
+    "prebuild": "pnpm clean",
+    "build:dev": "tsup src/index.ts",
+    "build": "pnpm db:generateDev && tsup",
+    "build:prod": "NODE_ENV=production prisma generate --generator client",
+    "dev": "tsup --watch",
+    "db:generateDev": "prisma generate --generator client",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push --skip-generate --accept-data-loss",
+    "db:migrate": "prisma migrate dev",
+    "db:reset": "prisma migrate reset --force",
+    "init:user": "dotenv -e ../../.env.local -- tsx scripts/init-user.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.2.0",
+    "prisma": "^5.2.0",
+    "bcrypt": "^6.0.0",
+    "rollup": "3.29.4"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^20.17.30",
+    "dotenv": "^16.6.1",
+    "dotenv-cli": "^7.4.1",
+    "rimraf": "^5.0.5",
+    "tsup": "^6.7.0",
+    "tsx": "^4.20.4",
+    "typescript": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
